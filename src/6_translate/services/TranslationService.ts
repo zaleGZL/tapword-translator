@@ -14,10 +14,18 @@ import {
     TranslationApiRequest,
     TranslationApiResponse,
 } from "../types/TranslationApiTypes"
-import { FragmentTranslationResult, TranslateFragmentParams, TranslateParams, TranslationResult } from "../types/TranslationModels"
+import {
+    ExplainTextParams,
+    FragmentTranslationResult,
+    TextExplanationResult,
+    TranslateFragmentParams,
+    TranslateParams,
+    TranslationResult,
+} from "../types/TranslationModels"
 import { TranslationError } from "../types/TranslationError"
 import { createWordTranslationService, WordTranslationService } from "@/8_generate/services/WordTranslationService"
 import { createFragmentTranslationService, FragmentTranslationService } from "@/8_generate/services/FragmentTranslationService"
+import { createTextExplanationService, TextExplanationService } from "@/8_generate/services/TextExplanationService"
 import * as storageManagerModule from "@/0_common/utils/storageManager"
 import type { UserSettings } from "@/0_common/types"
 import type { LLMConfig } from "@/8_generate/types/GenerateTypes"
@@ -29,6 +37,7 @@ const logger = createLogger("TranslationService")
 
 let localWordServicePromise: Promise<WordTranslationService> | null = null
 let localFragmentServicePromise: Promise<FragmentTranslationService> | null = null
+let localExplanationServicePromise: Promise<TextExplanationService> | null = null
 let cachedLocalConfigSignature: string | null = null
 let cachedUserSettings: UserSettings | null = null
 
@@ -39,6 +48,7 @@ function computeConfigSignature(config: LLMConfig): string {
 function resetLocalServiceCache(): void {
     localWordServicePromise = null
     localFragmentServicePromise = null
+    localExplanationServicePromise = null
     cachedLocalConfigSignature = null
 }
 
@@ -51,12 +61,7 @@ async function getCachedUserSettings(): Promise<UserSettings> {
     return cachedUserSettings
 }
 
-function buildLocalLlmConfig(settings: UserSettings): LLMConfig | null {
-    // Only build LLM config when customApi provider is selected
-    if (settings.translationProvider !== "customApi") {
-        return null
-    }
-
+function buildCustomApiLlmConfig(settings: UserSettings, overrides?: Partial<Pick<LLMConfig, "maxTokens" | "temperature" | "timeout">>): LLMConfig {
     const customApi = settings.customApi
     const apiKey = customApi.apiKey.trim()
     const baseUrl = customApi.baseUrl.trim()
@@ -70,10 +75,19 @@ function buildLocalLlmConfig(settings: UserSettings): LLMConfig | null {
         apiKey,
         baseUrl,
         model,
-        temperature: CUSTOM_API_FIXED_PARAMS.temperature,
-        maxTokens: CUSTOM_API_FIXED_PARAMS.maxTokens,
-        timeout: CUSTOM_API_FIXED_PARAMS.timeout,
+        temperature: overrides?.temperature ?? CUSTOM_API_FIXED_PARAMS.temperature,
+        maxTokens: overrides?.maxTokens ?? CUSTOM_API_FIXED_PARAMS.maxTokens,
+        timeout: overrides?.timeout ?? CUSTOM_API_FIXED_PARAMS.timeout,
     }
+}
+
+function buildLocalLlmConfig(settings: UserSettings): LLMConfig | null {
+    // Only build LLM config when customApi provider is selected for normal translations.
+    if (settings.translationProvider !== "customApi") {
+        return null
+    }
+
+    return buildCustomApiLlmConfig(settings)
 }
 
 async function getLocalWordService(config: LLMConfig): Promise<WordTranslationService> {
@@ -92,6 +106,15 @@ async function getLocalFragmentService(config: LLMConfig): Promise<FragmentTrans
         cachedLocalConfigSignature = signature
     }
     return localFragmentServicePromise
+}
+
+async function getLocalExplanationService(config: LLMConfig): Promise<TextExplanationService> {
+    const signature = computeConfigSignature(config)
+    if (!localExplanationServicePromise || signature !== cachedLocalConfigSignature) {
+        localExplanationServicePromise = createTextExplanationService(config)
+        cachedLocalConfigSignature = signature
+    }
+    return localExplanationServicePromise
 }
 
 async function translateWordWithLocal(params: TranslateParams, config: LLMConfig): Promise<TranslationResult> {
@@ -150,6 +173,28 @@ async function translateFragmentWithLocal(params: TranslateFragmentParams, confi
         translation: localResult.translation,
         sentenceTranslation: localResult.sentenceTranslation,
     }
+}
+
+async function explainTextWithCustomApi(params: ExplainTextParams, config: LLMConfig): Promise<TextExplanationResult> {
+    const { text, selectionType, leadingText, trailingText, sourceLanguage, targetLanguage = "zh", contextInfo } = params
+
+    logger.info("Using custom LLM API for text explanation")
+
+    const service = await getLocalExplanationService(config)
+    return await service.explainText({
+        text,
+        selectionType,
+        leadingText,
+        trailingText,
+        sourceLanguage,
+        targetLanguage,
+        contextInfo: {
+            previousSentences: contextInfo?.previousSentences,
+            nextSentences: contextInfo?.nextSentences,
+            sourceTitle: contextInfo?.bookName,
+            sourceAuthor: contextInfo?.bookAuthor,
+        },
+    })
 }
 
 /**
@@ -524,6 +569,25 @@ export async function translateFragment(params: TranslateFragmentParams): Promis
 
         // Handle unexpected errors
         logger.error("Unexpected fragment translation error:", error)
+        throw new TranslationError(i18nModule.translate("error.serverBusy"), i18nModule.translate("error.short.serverBusy"))
+    }
+}
+
+export async function explainText(params: ExplainTextParams): Promise<TextExplanationResult> {
+    try {
+        const userSettings = await getCachedUserSettings()
+        const localConfig = buildCustomApiLlmConfig(userSettings, {
+            maxTokens: Math.max(CUSTOM_API_FIXED_PARAMS.maxTokens, 2200),
+            timeout: Math.max(CUSTOM_API_FIXED_PARAMS.timeout, 15000),
+        })
+
+        return await explainTextWithCustomApi(params, localConfig)
+    } catch (error: unknown) {
+        if (error instanceof TranslationError) {
+            throw error
+        }
+
+        logger.error("Unexpected text explanation error:", error)
         throw new TranslationError(i18nModule.translate("error.serverBusy"), i18nModule.translate("error.short.serverBusy"))
     }
 }

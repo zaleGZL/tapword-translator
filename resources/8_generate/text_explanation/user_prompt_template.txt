@@ -1,0 +1,17 @@
+${sourceLanguageSection}
+
+${targetLanguageSection}
+
+${selectionTypeSection}
+
+${selectedTextSection}
+
+${sentenceSection}
+
+${contextSection}
+
+${sourceTypeSection}
+
+${sourceTitleSection}
+
+${sourceAuthorSection}

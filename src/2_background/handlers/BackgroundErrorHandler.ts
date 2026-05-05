@@ -9,6 +9,7 @@ import {
     QuotaExceededError,
     type FragmentTranslateResponseMessage,
     type SpeechSynthesisResponseMessage,
+    type TextExplanationResponseMessage,
     type TranslateResponseMessage,
 } from "@/0_common/types"
 import { TranslationError } from "@/6_translate"
@@ -27,6 +28,16 @@ function sendTranslationErrorResponse(error: TranslationError, sendResponse: (re
 function sendFragmentTranslationErrorResponse(error: TranslationError, sendResponse: (response: FragmentTranslateResponseMessage) => void): void {
     sendResponse({
         type: "FRAGMENT_TRANSLATE_RESPONSE",
+        success: false,
+        error: error.message,
+        errorType: "TranslationError",
+        ...(error.shortMessage ? { shortMessage: error.shortMessage } : {}),
+    })
+}
+
+function sendTextExplanationErrorResponse(error: TranslationError, sendResponse: (response: TextExplanationResponseMessage) => void): void {
+    sendResponse({
+        type: "TEXT_EXPLANATION_RESPONSE",
         success: false,
         error: error.message,
         errorType: "TranslationError",
@@ -96,6 +107,30 @@ export function handleFragmentTranslationRequestError(error: unknown, sendRespon
         type: "FRAGMENT_TRANSLATE_RESPONSE",
         success: false,
         error: error instanceof Error ? error.message : "Fragment translation failed",
+        errorType: "GenericError",
+    })
+}
+
+export function handleTextExplanationRequestError(error: unknown, sendResponse: (response: TextExplanationResponseMessage) => void): void {
+    if (error instanceof QuotaExceededError) {
+        sendResponse({
+            type: "TEXT_EXPLANATION_RESPONSE",
+            success: false,
+            error: error.message,
+            errorType: "QuotaExceeded",
+        })
+        return
+    }
+
+    if (error instanceof TranslationError) {
+        sendTextExplanationErrorResponse(error, sendResponse)
+        return
+    }
+
+    sendResponse({
+        type: "TEXT_EXPLANATION_RESPONSE",
+        success: false,
+        error: error instanceof Error ? error.message : "Text explanation failed",
         errorType: "GenericError",
     })
 }

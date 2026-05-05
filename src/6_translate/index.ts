@@ -8,8 +8,18 @@
  */
 
 // Export types
-export type { FragmentTranslationResult, TranslateFragmentParams, TranslateParams, TranslationResult } from "./types/TranslationModels"
+export type {
+    ExplainTextParams,
+    FragmentTranslationResult,
+    TextExplanationExample,
+    TextExplanationPartOfSpeech,
+    TextExplanationResult,
+    TextExplanationSelectionType,
+    TranslateFragmentParams,
+    TranslateParams,
+    TranslationResult,
+} from "./types/TranslationModels"
 export { TranslationError } from "./types/TranslationError"
 
 // Export services
-export { translateFragment, translateWord } from "./services/TranslationService"
+export { explainText, translateFragment, translateWord } from "./services/TranslationService"

@@ -12,6 +12,7 @@
     },
     "permissions": [
         "storage",
+        "contextMenus",
         "offscreen"
     ],
     "host_permissions": [

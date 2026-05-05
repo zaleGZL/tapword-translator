@@ -6,6 +6,7 @@
  */
 
 import type { TranslationDetailData } from "@/1_content/ui/translationModal"
+import type { TextExplanationExample, TextExplanationPartOfSpeech } from "@/0_common/types"
 import { APP_EDITION } from "@/0_common/constants"
 import * as i18nModule from "@/0_common/utils/i18n"
 import { containsMeaningfulWords, isSingleWord } from "@/0_common/utils/textUtils"
@@ -20,6 +21,7 @@ import successTemplate from "@/1_content/resources/modal-success.html?raw"
 import dictionaryTemplate from "@/1_content/resources/section-dictionary.html?raw"
 import sentenceTemplate from "@/1_content/resources/section-original-sentence.html?raw"
 import sentenceFragmentTemplate from "@/1_content/resources/section-sentence-fragment.html?raw"
+import explanationTemplate from "@/1_content/resources/section-explanation.html?raw"
 
 // ============================================================================
 // Template Helper Functions
@@ -158,6 +160,89 @@ function createFragmentSentenceSection(leadingText: string, fragment: string, tr
     })
 }
 
+function createExplanationBlock(titleKey: string, bodyHtml: string): string {
+    if (!bodyHtml) {
+        return ""
+    }
+
+    return `<div class="ai-translator-modal-explanation-block">
+        <div class="ai-translator-modal-explanation-title">${escapeHtml(i18nModule.translate(titleKey))}</div>
+        <div class="ai-translator-modal-explanation-body">${bodyHtml}</div>
+    </div>`
+}
+
+function createListHtml(items: string[] | undefined): string {
+    if (!items || items.length === 0) {
+        return ""
+    }
+
+    return `<ul class="ai-translator-modal-explanation-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+}
+
+function createExamplesHtml(examples: TextExplanationExample[] | undefined): string {
+    if (!examples || examples.length === 0) {
+        return ""
+    }
+
+    const items = examples
+        .map((example) => {
+            const note = example.note ? `<div class="ai-translator-modal-example-note">${escapeHtml(example.note)}</div>` : ""
+            return `<div class="ai-translator-modal-example">
+                <div class="ai-translator-modal-example-sentence">${escapeHtml(example.sentence)}</div>
+                <div class="ai-translator-modal-example-translation">${escapeHtml(example.translation)}</div>
+                ${note}
+            </div>`
+        })
+        .join("")
+
+    return `<div class="ai-translator-modal-examples">${items}</div>`
+}
+
+function createPartsOfSpeechHtml(partsOfSpeech: TextExplanationPartOfSpeech[] | undefined): string {
+    if (!partsOfSpeech || partsOfSpeech.length === 0) {
+        return ""
+    }
+
+    const items = partsOfSpeech
+        .map((item) => {
+            const meanings = item.meanings.map((meaning) => `<li>${escapeHtml(meaning)}</li>`).join("")
+            return `<div class="ai-translator-modal-pos-item">
+                <div class="ai-translator-modal-pos-label">${escapeHtml(item.partOfSpeech)}</div>
+                <ul class="ai-translator-modal-pos-meanings">${meanings}</ul>
+            </div>`
+        })
+        .join("")
+
+    return `<div class="ai-translator-modal-pos-list">${items}</div>`
+}
+
+function createExplanationSection(data: TranslationDetailData): string {
+    const explanation = data.explanation
+    if (!explanation) {
+        return ""
+    }
+
+    const blocks = [
+        createExplanationBlock("modal.explanation.partsOfSpeech", createPartsOfSpeechHtml(explanation.partsOfSpeech)),
+        createExplanationBlock("modal.explanation.meaning", escapeHtml(explanation.meaning)),
+        createExplanationBlock("modal.explanation.usage", escapeHtml(explanation.usage)),
+        createExplanationBlock("modal.explanation.grammar", explanation.grammar ? escapeHtml(explanation.grammar) : ""),
+        createExplanationBlock("modal.explanation.examples", createExamplesHtml(explanation.examples)),
+        createExplanationBlock("modal.explanation.collocations", createListHtml(explanation.collocations)),
+        createExplanationBlock("modal.explanation.wordFormation", explanation.wordFormation ? escapeHtml(explanation.wordFormation) : ""),
+        createExplanationBlock("modal.explanation.memoryTips", createListHtml(explanation.memoryTips)),
+    ].join("")
+
+    if (!blocks) {
+        return ""
+    }
+
+    const translatedTemplate = i18nModule.translateTemplate(explanationTemplate)
+    return replaceVariables(translatedTemplate, {
+        EXPLANATION_CONTENT: blocks,
+    })
+}
+
 // ============================================================================
 // Template Renderers
 // ============================================================================
@@ -214,6 +299,8 @@ export function renderSuccessTemplate(data: TranslationDetailData, showUpdateLab
         )
     }
 
+    const explanationSection = createExplanationSection(data)
+
     // Format phonetic text with slashes if available
     let phoneticText = ""
     if (data.phonetic) {
@@ -227,6 +314,7 @@ export function renderSuccessTemplate(data: TranslationDetailData, showUpdateLab
         PHONETIC: escapeHtml(phoneticText),
         ORIGINAL_SENTENCE_SECTION: originalSentenceSection,
         DICTIONARY_SECTION: dictionarySection,
+        EXPLANATION_SECTION: explanationSection,
         APP_EDITION,
     })
 }
@@ -276,12 +364,14 @@ export function renderSuccessFragmentTemplate(data: TranslationDetailData, showU
 
     // Create update label for the fragment section header if needed
     const fragmentUpdateLabel = showUpdateLabel ? getUpdateLabelHtml() : ""
+    const explanationSection = createExplanationSection(data)
 
     const translatedTemplate = i18nModule.translateTemplate(successFragmentTemplate)
     return replaceVariables(translatedTemplate, {
         FRAGMENT_TEXT: escapeHtml(data.text),
         FRAGMENT_TRANSLATION: escapeHtml(data.translation),
         SENTENCE_SECTION: sentenceSection,
+        EXPLANATION_SECTION: explanationSection,
         UPDATE_LABEL: fragmentUpdateLabel,
         APP_EDITION,
     })

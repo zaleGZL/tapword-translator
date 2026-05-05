@@ -8,7 +8,7 @@
  * 4. Translation result rendering
  */
 
-import type { PageActivatedMessage, UserSettings } from "@/0_common/types"
+import type { MessageType, OpenTextExplanationMessage, PageActivatedMessage, UserSettings } from "@/0_common/types"
 import { DEFAULT_USER_SETTINGS } from "@/0_common/types"
 import { UNDERLINE_OPACITY, UNDERLINE_OFFSET_INTERNAL_SHIFT_PX } from "@/0_common/constants"
 import * as loggerModule from "@/0_common/utils/logger"
@@ -104,6 +104,9 @@ async function init(): Promise<void> {
     // Listen for text selection (for manual drag selection)
     document.addEventListener("mouseup", inputListener.handleTextSelection)
 
+    // Capture the exact selected Range before the browser opens its native context menu.
+    document.addEventListener("contextmenu", inputListener.handleContextMenuSelection, { capture: true })
+
     // Listen for clicks on other text elements to hide icon
     document.addEventListener("mousedown", inputListener.handleDocumentClick)
 
@@ -115,6 +118,22 @@ async function init(): Promise<void> {
 
     logger.info("AI Click Translator - Event listeners registered")
 }
+
+chrome.runtime.onMessage.addListener((message: { type?: MessageType }, _sender, sendResponse) => {
+    if (message.type !== "OPEN_TEXT_EXPLANATION") {
+        return false
+    }
+
+    void inputListener
+        .handleTextExplanationCommand(message as OpenTextExplanationMessage)
+        .then(() => sendResponse({ success: true }))
+        .catch((error) => {
+            logger.error("Failed to handle text explanation command:", error)
+            sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
+        })
+
+    return true
+})
 
 // Start the extension
 init()

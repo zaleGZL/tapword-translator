@@ -10,5 +10,9 @@
     "extDescription": {
         "message": "翻訳を原文の下に埋め込み、バイリンガル字幕のような没入感のある読書体験を提供します。",
         "description": "The description of the extension displayed in Chrome Web Store"
+    },
+    "contextMenuExplain": {
+        "message": "Explain with TapWord",
+        "description": "Context menu item for explaining selected text"
     }
 }

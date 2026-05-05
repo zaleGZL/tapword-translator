@@ -8,6 +8,9 @@ import type {
     FragmentTranslateRequestMessage,
     FragmentTranslateResponseMessage,
     FragmentTranslationContextData,
+    TextExplanationContextData,
+    TextExplanationRequestMessage,
+    TextExplanationResponseMessage,
     TranslateRequestMessage,
     TranslateResponseMessage,
     TranslationContextData,
@@ -77,6 +80,17 @@ export async function requestFragmentTranslation(data: FragmentTranslationContex
     return sendMessageWithRetry<FragmentTranslateRequestMessage, FragmentTranslateResponseMessage>(
         {
             type: "FRAGMENT_TRANSLATE_REQUEST",
+            data,
+        },
+        2,
+        150
+    )
+}
+
+export async function requestTextExplanation(data: TextExplanationContextData): Promise<TextExplanationResponseMessage> {
+    return sendMessageWithRetry<TextExplanationRequestMessage, TextExplanationResponseMessage>(
+        {
+            type: "TEXT_EXPLANATION_REQUEST",
             data,
         },
         2,

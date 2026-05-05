@@ -244,7 +244,7 @@ function maybeDetachHitTestListeners(): void {
 /** Open or close the detail modal for the given translation. */
 function handleTranslationClick(id: string): void {
     if (translationModal.getActiveModalAnchorId() === id) {
-        translationModal.closeTranslationModal()
+        logger.info("Translation detail modal already open for:", id)
         return
     }
 
@@ -657,6 +657,7 @@ export function showTranslationResult(
             englishDefinition: state.status === "success" ? state.englishDefinition : undefined,
             targetDefinition: state.status === "success" ? state.targetDefinition : undefined,
             targetLanguage: state.status === "success" ? state.targetLanguage : undefined,
+            explanation: state.status === "success" ? state.explanation : undefined,
             lemma: state.status === "success" ? state.lemma : undefined,
             phonetic: state.status === "success" ? state.phonetic : undefined,
             lemmaPhonetic: state.status === "success" ? state.lemmaPhonetic : undefined,
@@ -743,6 +744,7 @@ export function updateTranslationResult(translationId: string, state: Translatio
             englishDefinition: state.status === "success" ? state.englishDefinition : existingData.englishDefinition,
             targetDefinition: state.status === "success" ? state.targetDefinition : existingData.targetDefinition,
             targetLanguage: state.status === "success" ? state.targetLanguage : existingData.targetLanguage,
+            explanation: state.status === "success" ? state.explanation : existingData.explanation,
             lemma: state.status === "success" ? state.lemma : existingData.lemma,
             phonetic: state.status === "success" ? state.phonetic : existingData.phonetic,
             lemmaPhonetic: state.status === "success" ? state.lemmaPhonetic : existingData.lemmaPhonetic,

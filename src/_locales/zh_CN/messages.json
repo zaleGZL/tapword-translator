@@ -10,5 +10,9 @@
     "extDescription": {
         "message": "将翻译嵌入原文下面，带来双语字幕般的沉浸式阅读体验",
         "description": "The description of the extension displayed in Chrome Web Store"
+    },
+    "contextMenuExplain": {
+        "message": "用触词讲解",
+        "description": "Context menu item for explaining selected text"
     }
 }

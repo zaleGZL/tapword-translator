@@ -9,6 +9,7 @@ import * as loggerModule from "@/0_common/utils/logger"
 import * as FragmentTranslationRequestHandler from "../handlers/FragmentTranslationRequestHandler"
 import { buildPopupBootstrapResponse } from "../handlers/PopupBootstrapHandler"
 import * as SpeechSynthesisRequestHandler from "../handlers/SpeechSynthesisRequestHandler"
+import * as TextExplanationRequestHandler from "../handlers/TextExplanationRequestHandler"
 import * as TokenWarmUpHandler from "../handlers/TokenWarmUpHandler"
 import * as TranslationRequestHandler from "../handlers/TranslationRequestHandler"
 import * as serviceInitializer from "../services/ServiceInitializer"
@@ -36,6 +37,10 @@ export function setupMessageListener(): void {
             case "FRAGMENT_TRANSLATE_REQUEST":
                 FragmentTranslationRequestHandler.handleFragmentTranslationRequest(message, sendResponse)
                 return true // Keep message channel open for async response
+
+            case "TEXT_EXPLANATION_REQUEST":
+                TextExplanationRequestHandler.handleTextExplanationRequest(message, sendResponse)
+                return true
 
             case "SPEECH_SYNTHESIS_REQUEST":
                 SpeechSynthesisRequestHandler.handleSpeechSynthesisRequest(message, sendResponse)

@@ -10,5 +10,9 @@
     "extDescription": {
         "message": "Embeds translations below the original text for an immersive, bilingual subtitle-like reading experience.",
         "description": "The description of the extension displayed in Chrome Web Store"
+    },
+    "contextMenuExplain": {
+        "message": "Explain with TapWord",
+        "description": "Context menu item for explaining selected text"
     }
 }

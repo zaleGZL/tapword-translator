@@ -10,11 +10,11 @@
         "prebuild:dev": "cross-env KEY_ENV=dev node other/scripts/inject-secrets-simple.mjs",
         "prebuild:prod": "cross-env KEY_ENV=prod node other/scripts/inject-secrets-simple.mjs",
 
-        "dev": "npm run prebuild:dev && vite -c vite.config.ts --mode development",
+        "dev": "npm run dev:community",
         "dev:firefox": "npm run prebuild:dev && vite -c vite.config.ts --mode firefox",
         "dev:prod": "npm run prebuild:prod && vite -c vite.config.ts --mode production",
 
-        "build": "npm run clean && npm run prebuild:dev && vite build -c vite.config.ts --mode development",
+        "build": "npm run build:community",
         "build:firefox": "npm run clean && npm run prebuild:prod && cross-env NODE_ENV=production vite build -c vite.config.ts --mode firefox",
         "build:firefox-dev": "npm run clean && npm run prebuild:dev && vite build -c vite.config.ts --mode firefox-development",
         "build:prod": "npm run clean && npm run prebuild:prod && cross-env NODE_ENV=production vite build -c vite.config.ts --mode production",

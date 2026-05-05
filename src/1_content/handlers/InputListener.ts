@@ -4,11 +4,14 @@
  * Handles DOM events and translates user intent into pipeline calls.
  */
 
+import type { OpenTextExplanationMessage } from "@/0_common/types"
 import * as loggerModule from "@/0_common/utils/logger"
 import * as constants from "@/1_content/constants"
 import * as contentIndex from "@/1_content/index"
 import * as iconManager from "@/1_content/ui/iconManager"
 import * as translationHitTesting from "@/1_content/ui/translationDisplayV2/hitTesting"
+import * as domSanitizer from "@/1_content/utils/domSanitizer"
+import * as editableElementDetector from "@/1_content/handlers/utils/editableElementDetector"
 import { expandRangeToSentence } from "@/1_content/utils/contextExtractorV2"
 import * as translationPipeline from "@/1_content/handlers/TranslationPipeline"
 import { validateSelectionAsync, validateSingleClickAsync } from "@/1_content/handlers/utils/selectionValidator"
@@ -16,6 +19,7 @@ import { validateSelectionAsync, validateSingleClickAsync } from "@/1_content/ha
 const logger = loggerModule.createLogger("selectionHandler")
 const SINGLE_CLICK_TRIGGER_LABEL = "Single Click"
 const SINGLE_CLICK_LOG_PREFIX = "[Single Click]"
+let latestContextMenuRange: Range | null = null
 
 /**
  * Handle text selection on the page
@@ -69,6 +73,58 @@ export async function handleSingleClick(event: MouseEvent): Promise<void> {
     translationHitTesting.cancelPendingTranslationClick()
 
     await translationPipeline.triggerTranslationForRange(validation.range!, SINGLE_CLICK_TRIGGER_LABEL, "text")
+}
+
+export function handleContextMenuSelection(): void {
+    const selection = window.getSelection()
+    latestContextMenuRange = null
+
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        return
+    }
+
+    const range = selection.getRangeAt(0)
+    const container = range.commonAncestorContainer
+    const element = container.nodeType === Node.ELEMENT_NODE ? (container as Element) : container.parentElement
+
+    if (editableElementDetector.isEditableElement(element)) {
+        return
+    }
+
+    const selectedText = domSanitizer.getCleanTextFromRange(range).trim()
+    if (!selectedText) {
+        return
+    }
+
+    if (selectedText.length > constants.MAX_SELECTION_LENGTH || /^[\d\s\p{P}\p{S}]+$/u.test(selectedText)) {
+        return
+    }
+
+    latestContextMenuRange = range.cloneRange()
+}
+
+export async function handleTextExplanationCommand(message?: OpenTextExplanationMessage): Promise<void> {
+    const selection = window.getSelection()
+    const selectedTextFromMessage = message?.data?.selectedText?.trim() || ""
+    let range = latestContextMenuRange
+
+    if ((!range || !range.startContainer.isConnected) && selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+        range = selection.getRangeAt(0).cloneRange()
+    }
+
+    if (!range) {
+        logger.warn("No saved context-menu range available for text explanation.")
+        return
+    }
+
+    const rangeText = domSanitizer.getCleanTextFromRange(range).trim()
+    if (selectedTextFromMessage && rangeText && selectedTextFromMessage !== rangeText) {
+        logger.debug("Context menu selected text differs from saved range text", { selectedTextFromMessage, rangeText })
+    }
+
+    iconManager.removeTranslationIcon()
+    selection?.removeAllRanges()
+    await translationPipeline.triggerTextExplanationForRange(range, "Context Menu")
 }
 
 /**

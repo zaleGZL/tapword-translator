@@ -487,6 +487,100 @@
     white-space: pre-wrap;
 }
 
+.ai-translator-modal-explanation-section {
+    padding: 0 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ai-translator-modal-explanation-container {
+    background-color: var(--modal-section-bg);
+    border-radius: 4px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ai-translator-modal-explanation-block {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.ai-translator-modal-explanation-title {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    color: var(--modal-primary-color);
+    font-size: 12px;
+    letter-spacing: 0;
+    line-height: 16px;
+}
+
+.ai-translator-modal-explanation-body {
+    font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    color: var(--modal-primary-80);
+    font-size: 12px;
+    letter-spacing: 0;
+    line-height: 18px;
+    word-break: break-word;
+}
+
+.ai-translator-modal-explanation-list {
+    margin: 0;
+    padding-left: 16px;
+}
+
+.ai-translator-modal-pos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ai-translator-modal-pos-item {
+    display: grid;
+    grid-template-columns: minmax(54px, max-content) 1fr;
+    gap: 8px;
+    align-items: start;
+}
+
+.ai-translator-modal-pos-label {
+    color: var(--modal-blue-accent-color);
+    font-weight: 600;
+}
+
+.ai-translator-modal-pos-meanings {
+    margin: 0;
+    padding-left: 16px;
+}
+
+.ai-translator-modal-example {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+}
+
+.ai-translator-modal-example:last-child {
+    margin-bottom: 0;
+}
+
+.ai-translator-modal-example-sentence {
+    color: var(--modal-primary-color);
+    font-weight: 500;
+}
+
+.ai-translator-modal-example-translation,
+.ai-translator-modal-example-note {
+    color: var(--modal-primary-80);
+}
+
+.ai-translator-modal-example-note {
+    font-size: 11px;
+}
+
 /* ============================================================================
    Fragment Section (for fragment translations)
    ============================================================================ */

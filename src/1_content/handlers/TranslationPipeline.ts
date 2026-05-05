@@ -13,6 +13,7 @@ import * as contentIndex from "@/1_content/index"
 import * as translationRequest from "@/1_content/services/translationRequest"
 import * as iconManager from "@/1_content/ui/iconManager"
 import * as translationDisplay from "@/1_content/ui/translationDisplayV2"
+import * as translationModal from "@/1_content/ui/translationModal"
 import { extractContextV2 } from "@/1_content/utils/contextExtractorV2"
 import * as domSanitizer from "@/1_content/utils/domSanitizer"
 import * as languageDetector from "@/1_content/utils/languageDetector"
@@ -85,6 +86,172 @@ export async function triggerTranslationWithSplit(range: Range, baseLabel: strin
     const limiter = createConcurrencyLimiter(MAX_PARALLEL_TRANSLATIONS)
     const loadingVariant: "text" | "spinner" = targets.length > 1 ? "spinner" : "text"
     await runBatchedTranslations(triggerLabel, targets, limiter, loadingVariant)
+}
+
+export async function triggerTextExplanationForRange(range: Range, triggerSource: string = "Context Menu"): Promise<void> {
+    const settings = contentIndex.getCachedUserSettings() ?? DEFAULT_USER_SETTINGS
+    if (!settings.enableTapWord) {
+        logger.info(`[${triggerSource}] Text explanation skipped because TapWord is disabled.`)
+        return
+    }
+
+    const rawText = domSanitizer.getCleanTextFromRange(range)
+    const sanitizedText = rawText.trim()
+    if (!sanitizedText) {
+        logger.warn(`[${triggerSource}] No selected text available for explanation.`)
+        return
+    }
+
+    logger.info(`[${triggerSource}] Text explanation requested for:`, sanitizedText)
+
+    const textForRouting = domSanitizer.getSurroundingTextForDetection(range, 150)
+    const { lang: detectedLang, blockContextLang } = await languageDetector.detectSourceLanguageAsync(textForRouting)
+    const hasCJK = languageDetector.hasCJKCharacters(sanitizedText)
+    const isCJKLanguage = ["zh", "ja", "ko"].includes(detectedLang) || hasCJK
+
+    const trimRes = rangeAdjuster.trimBoundaryWhitespace(range)
+    let workingRange = trimRes.range
+    let selectionType: "word" | "fragment" = "fragment"
+
+    if (!isCJKLanguage) {
+        const cls = selectionClassifier.detectSelectionType(workingRange)
+        selectionType = cls.type === "word" ? "word" : "fragment"
+        if (!cls.isComplete) {
+            workingRange = rangeAdjuster.expandToWordBoundaries(workingRange).range
+        }
+    }
+
+    const selectedText = domSanitizer.getCleanTextFromRange(workingRange).trim()
+    if (!selectedText) {
+        logger.warn(`[${triggerSource}] Selected text became empty after boundary adjustment.`)
+        return
+    }
+
+    const v2 = extractContextV2(workingRange)
+    const displaySettings = buildDisplaySettings(settings)
+    const userTargetLang = settings.targetLanguage || "zh"
+    const selectionScriptLang = languageDetector.detectSelectionScriptLang(selectedText)
+    const langForFallback = selectionScriptLang || detectedLang
+    const targetLang = languageDetector.resolveTargetLanguage(langForFallback, userTargetLang, blockContextLang)
+
+    const context = {
+        word: selectedText,
+        leadingText: v2.leadingText,
+        trailingText: v2.trailingText,
+        originalSentence: v2.currentSentence,
+        previousSentences: v2.previousSentences.length ? v2.previousSentences : undefined,
+        nextSentences: v2.nextSentences.length ? v2.nextSentences : undefined,
+        bookName: `网页<<${document.title}>>`,
+        sourceLanguage: detectedLang,
+        targetLanguage: targetLang,
+    }
+
+    let anchorId = ""
+    const performExplanationRequest = async () => {
+        try {
+            const response = await translationRequest.requestTextExplanation({
+                text: selectedText,
+                selectionType,
+                leadingText: context.leadingText,
+                trailingText: context.trailingText,
+                originalSentence: context.originalSentence,
+                previousSentences: context.previousSentences,
+                nextSentences: context.nextSentences,
+                bookName: context.bookName,
+                sourceLanguage: detectedLang,
+                targetLanguage: targetLang,
+            })
+
+            if (response.success) {
+                translationDisplay.updateTranslationResult(
+                    anchorId,
+                    {
+                        status: "success",
+                        translation: response.data.summary,
+                        targetLanguage: targetLang,
+                        explanation: response.data,
+                    },
+                    displaySettings
+                )
+                return
+            }
+
+            let tooltipText = response.shortMessage || "讲解失败"
+            let errorMessage: string = ERROR_MESSAGES.SERVER_BUSY
+            if (response.errorType === "QuotaExceeded") {
+                tooltipText = response.shortMessage || ERROR_MESSAGES.QUOTA_EXCEEDED_SHORT
+                errorMessage = response.error
+            } else if (response.errorType === "TranslationError") {
+                errorMessage = response.error
+            }
+
+            translationDisplay.updateTranslationResult(
+                anchorId,
+                {
+                    status: "error",
+                    text: tooltipText,
+                    errorMessage,
+                },
+                displaySettings
+            )
+        } catch (error) {
+            translationDisplay.updateTranslationResult(
+                anchorId,
+                {
+                    status: "error",
+                    text: "讲解失败",
+                    errorMessage: ERROR_MESSAGES.SERVER_BUSY,
+                },
+                displaySettings
+            )
+            logger.error("Text explanation request failed:", error)
+        }
+    }
+
+    const activeRanges = translationDisplay.getActiveRanges()
+    const preOverlappingIds = translationOverlapDetector.detectOverlappingTranslations(workingRange, activeRanges)
+
+    const refreshCallback = async () => {
+        logger.info(`[${triggerSource}] Refreshing text explanation for:`, selectedText)
+        await performExplanationRequest()
+    }
+
+    anchorId = translationDisplay.showTranslationResult(
+        workingRange,
+        selectedText,
+        {
+            status: "loading",
+            text: i18nModule.translate("modal.loading"),
+            loadingVariant: "text",
+        },
+        context,
+        refreshCallback,
+        selectionType,
+        displaySettings
+    )
+
+    const toRemove = preOverlappingIds.filter((id) => id !== anchorId)
+    toRemove.forEach((id) => translationDisplay.removeTranslationResult(id))
+
+    await translationModal.showTranslationModal(
+        {
+            status: "loading",
+            translationType: selectionType,
+            text: selectedText,
+            translation: "",
+            originalSentence: context.originalSentence,
+            leadingText: context.leadingText,
+            trailingText: context.trailingText,
+            sourceLanguage: context.sourceLanguage,
+            targetLanguage: targetLang,
+            onDelete: () => translationDisplay.removeTranslationResult(anchorId),
+            onRefresh: refreshCallback,
+        },
+        workingRange,
+        anchorId
+    )
+
+    await performExplanationRequest()
 }
 
 async function runBatchedTranslations(

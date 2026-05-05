@@ -17,6 +17,7 @@ import * as loggerModule from "@/0_common/utils/logger"
 import { isLowerVersion } from "@/0_common/utils/version"
 import * as backendModule from "@/5_backend"
 import * as MessageRouter from "./messaging/MessageRouter"
+import * as ContextMenuManager from "./services/ContextMenuManager"
 import * as ServiceInitializer from "./services/ServiceInitializer"
 
 const logger = loggerModule.createLogger("background")
@@ -34,6 +35,7 @@ async function initialize(): Promise<void> {
     // Register message listener ASAP to avoid first-message race on cold start
     logger.info("[INIT_DEBUG] Registering message listener early")
     MessageRouter.setupMessageListener()
+    ContextMenuManager.setupContextMenus()
 
     logger.info("[INIT_DEBUG] Starting critical services initialization")
     const criticalReadyPromise = ServiceInitializer.ensureCriticalServicesReady()

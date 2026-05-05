@@ -113,6 +113,73 @@ export interface FragmentTranslationResult {
     sentenceTranslation?: string
 }
 
+export type TextExplanationSelectionType = "word" | "fragment"
+
+export interface TextExplanationRequest {
+    /** Selected word, phrase, or sentence to explain */
+    text: string
+    /** Whether the selection is treated as a single word or longer text */
+    selectionType: TextExplanationSelectionType
+    /** Text before the selection in the same sentence */
+    leadingText?: string
+    /** Text after the selection in the same sentence */
+    trailingText?: string
+    /** Source language code */
+    sourceLanguage?: string
+    /** Target language code used for the explanation */
+    targetLanguage?: string
+    /** Optional context information */
+    contextInfo?: {
+        previousSentences?: string[]
+        nextSentences?: string[]
+        sourceTitle?: string
+        sourceAuthor?: string
+        sourceType?: string
+    }
+}
+
+export interface TextExplanationExample {
+    sentence: string
+    translation: string
+    note?: string
+}
+
+export interface TextExplanationPartOfSpeech {
+    partOfSpeech: string
+    meanings: string[]
+}
+
+export interface TextExplanationResult {
+    summary: string
+    meaning: string
+    usage: string
+    grammar?: string
+    partsOfSpeech?: TextExplanationPartOfSpeech[]
+    examples: TextExplanationExample[]
+    collocations?: string[]
+    wordFormation?: string
+    memoryTips?: string[]
+}
+
+export interface LLMTextExplanationResponse {
+    summary: string
+    meaning: string
+    usage: string
+    grammar?: string
+    parts_of_speech?: Array<{
+        part_of_speech?: string
+        meanings?: string[]
+    }>
+    examples?: Array<{
+        sentence?: string
+        translation?: string
+        note?: string
+    }>
+    collocations?: string[]
+    word_formation?: string
+    memory_tips?: string[]
+}
+
 /**
  * Raw fragment LLM response format (JSON structure)
  */

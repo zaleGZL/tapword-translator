@@ -5,6 +5,7 @@
  * This file has no runtime dependencies and is safe to import from any layer.
  */
 
+import type { TextExplanationResult } from "@/0_common/types"
 import type { TranslationDetailData } from "@/1_content/ui/translationModal"
 
 // ============================================================================
@@ -28,6 +29,7 @@ export interface SuccessState {
     englishDefinition?: string
     targetDefinition?: string
     targetLanguage?: string
+    explanation?: TextExplanationResult
     /** Canonical base form of the word (e.g. "run" for "running"). */
     lemma?: string | null
     phonetic?: string

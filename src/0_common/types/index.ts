@@ -70,7 +70,15 @@ export interface SpeechSynthesisRequestData {
 /**
  * Message types for content-background communication
  */
-export type MessageType = "TRANSLATE_REQUEST" | "FRAGMENT_TRANSLATE_REQUEST" | "SPEECH_SYNTHESIS_REQUEST" | "SPEECH_STOP_REQUEST" | "POPUP_BOOTSTRAP_REQUEST" | "PAGE_ACTIVATED"
+export type MessageType =
+    | "TRANSLATE_REQUEST"
+    | "FRAGMENT_TRANSLATE_REQUEST"
+    | "TEXT_EXPLANATION_REQUEST"
+    | "OPEN_TEXT_EXPLANATION"
+    | "SPEECH_SYNTHESIS_REQUEST"
+    | "SPEECH_STOP_REQUEST"
+    | "POPUP_BOOTSTRAP_REQUEST"
+    | "PAGE_ACTIVATED"
 
 /**
  * Page activated message (sent by content script on injection for token pre-warming)
@@ -178,6 +186,98 @@ export interface FragmentTranslateResponseErrorMessage {
  * Fragment translation response message (union type)
  */
 export type FragmentTranslateResponseMessage = FragmentTranslateResponseSuccessMessage | FragmentTranslateResponseErrorMessage
+
+export type TextExplanationSelectionType = "word" | "fragment"
+
+export interface TextExplanationContextData {
+    /** The selected word, phrase, or sentence to explain */
+    text: string
+    /** Whether the selection is treated as a single word or a longer fragment */
+    selectionType: TextExplanationSelectionType
+    /** Text before the selection in the same sentence */
+    leadingText?: string
+    /** Text after the selection in the same sentence */
+    trailingText?: string
+    /** Complete original sentence containing the selection */
+    originalSentence?: string
+    /** Previous sentences (1-2 sentences before) */
+    previousSentences?: string[]
+    /** Next sentences (1-2 sentences after) */
+    nextSentences?: string[]
+    /** Source title, such as the current webpage title */
+    bookName?: string
+    /** Source language (optional, auto-detect if not provided) */
+    sourceLanguage?: string
+    /** Target language used for the explanation */
+    targetLanguage?: string
+}
+
+export interface TextExplanationExample {
+    /** Example sentence in the source language */
+    sentence: string
+    /** Example translation in the target language */
+    translation: string
+    /** Optional note explaining the usage pattern */
+    note?: string
+}
+
+export interface TextExplanationPartOfSpeech {
+    /** Part of speech, such as noun, verb, adjective */
+    partOfSpeech: string
+    /** Meanings for this part of speech in Chinese or the target explanation language */
+    meanings: string[]
+}
+
+export interface TextExplanationResult {
+    /** Short text used for inline annotation and as a quick modal summary */
+    summary: string
+    /** Core meaning in the current context */
+    meaning: string
+    /** Usage guidance for the selected text */
+    usage: string
+    /** Grammar notes, when relevant */
+    grammar?: string
+    /** Meanings grouped by part of speech, mainly for single-word explanations */
+    partsOfSpeech?: TextExplanationPartOfSpeech[]
+    /** Example sentences with translations */
+    examples: TextExplanationExample[]
+    /** Common collocations, patterns, or neighboring expressions */
+    collocations?: string[]
+    /** Root, affix, or word-formation explanation when relevant */
+    wordFormation?: string
+    /** Tips to remember the word or expression quickly */
+    memoryTips?: string[]
+}
+
+export interface TextExplanationRequestMessage {
+    type: "TEXT_EXPLANATION_REQUEST"
+    data: TextExplanationContextData
+}
+
+export interface TextExplanationResponseSuccessMessage {
+    type: "TEXT_EXPLANATION_RESPONSE"
+    success: true
+    data: TextExplanationResult
+}
+
+export interface TextExplanationResponseErrorMessage {
+    type: "TEXT_EXPLANATION_RESPONSE"
+    success: false
+    error: string
+    /** Error type to distinguish TranslationError from generic errors and quota exceeded */
+    errorType?: "TranslationError" | "QuotaExceeded" | "GenericError"
+    /** Optional short error text for tooltip display */
+    shortMessage?: string
+}
+
+export type TextExplanationResponseMessage = TextExplanationResponseSuccessMessage | TextExplanationResponseErrorMessage
+
+export interface OpenTextExplanationMessage {
+    type: "OPEN_TEXT_EXPLANATION"
+    data?: {
+        selectedText?: string
+    }
+}
 
 /**
  * Speech synthesis request message

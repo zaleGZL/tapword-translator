@@ -93,3 +93,64 @@ export interface FragmentTranslationResult {
     /** 完整句子翻译 (可选: 当提供 leadingText 和 trailingText 时返回) */
     sentenceTranslation?: string
 }
+
+export type TextExplanationSelectionType = "word" | "fragment"
+
+export interface ExplainTextParams {
+    /** 要讲解的文本 */
+    text: string
+    /** 文本类型 */
+    selectionType: TextExplanationSelectionType
+    /** 文本前的句内上下文 */
+    leadingText?: string
+    /** 文本后的句内上下文 */
+    trailingText?: string
+    /** 源语言 */
+    sourceLanguage?: string
+    /** 讲解目标语言 */
+    targetLanguage?: string
+    /** 上下文信息 */
+    contextInfo?: {
+        previousSentences?: string[]
+        nextSentences?: string[]
+        bookName?: string
+        bookAuthor?: string
+    }
+}
+
+export interface TextExplanationExample {
+    /** 原语言例句 */
+    sentence: string
+    /** 目标语言翻译 */
+    translation: string
+    /** 用法说明 */
+    note?: string
+}
+
+export interface TextExplanationPartOfSpeech {
+    /** 词性 */
+    partOfSpeech: string
+    /** 该词性的释义 */
+    meanings: string[]
+}
+
+export interface TextExplanationResult {
+    /** 简短译义/摘要 */
+    summary: string
+    /** 核心含义 */
+    meaning: string
+    /** 用法说明 */
+    usage: string
+    /** 语法说明 */
+    grammar?: string
+    /** 按词性分组的释义 */
+    partsOfSpeech?: TextExplanationPartOfSpeech[]
+    /** 例句 */
+    examples: TextExplanationExample[]
+    /** 常见搭配或句型 */
+    collocations?: string[]
+    /** 词根/构词 */
+    wordFormation?: string
+    /** 记忆方法 */
+    memoryTips?: string[]
+}
