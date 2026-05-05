@@ -7,8 +7,27 @@ import { translateWord } from '@/6_translate/services/TranslationService';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the backend post function
-vi.mock('@/5_backend', () => ({
-    post: vi.fn(),
+vi.mock('@/5_backend', () => {
+    class APIError extends Error {
+        type: string;
+        code?: number;
+
+        constructor(params: { type: string; code?: number; message?: string }) {
+            super(params.message ?? '');
+            this.name = 'APIError';
+            this.type = params.type;
+            this.code = params.code;
+        }
+    }
+
+    return {
+        APIError,
+        post: vi.fn(),
+    };
+});
+
+vi.mock('@/0_common/utils/i18n', () => ({
+    translate: vi.fn((key: string) => key),
 }));
 
 describe('TranslationService', () => {
@@ -33,6 +52,7 @@ describe('TranslationService', () => {
                 word: 'light',
                 leadingText: 'The room was filled with natural ',
                 trailingText: ' from the large windows.',
+                originalSentence: 'The room was filled with natural light from the large windows.',
                 sourceLanguage: 'en',
                 targetLanguage: 'zh',
                 contextInfo: {
@@ -58,6 +78,7 @@ describe('TranslationService', () => {
                     context: {
                         leadingText: 'The room was filled with natural ',
                         trailingText: ' from the large windows.',
+                        originalSentence: 'The room was filled with natural light from the large windows.',
                         previousSentences: ['He opened the curtains.'],
                         nextSentences: ['It made the space feel warm and inviting.'],
                         bookName: undefined,
@@ -123,11 +144,10 @@ describe('TranslationService', () => {
 
     describe('error handling', () => {
         it('should propagate API errors', async () => {
-            const mockError = {
+            const mockError = new backend.APIError({
                 type: 'requestError',
-                httpStatusCode: 500,
                 message: 'Internal server error',
-            };
+            });
 
             vi.mocked(backend.post).mockRejectedValue(mockError);
 
@@ -137,7 +157,9 @@ describe('TranslationService', () => {
                     leadingText: '',
                     trailingText: '',
                 })
-            ).rejects.toEqual(mockError);
+            ).rejects.toMatchObject({
+                name: 'TranslationError',
+            });
         });
     });
 });

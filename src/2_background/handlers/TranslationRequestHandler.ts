@@ -27,8 +27,18 @@ export async function handleTranslationRequest(
         await serviceInitializer.ensureCriticalServicesReady()
         serviceInitializer.startBackgroundWarmUp()
 
-        const { word, leadingText, trailingText, previousSentences, nextSentences, sourceLanguage, targetLanguage, upgradeModel, bookName } =
-            message.data
+        const {
+            word,
+            leadingText,
+            trailingText,
+            originalSentence,
+            previousSentences,
+            nextSentences,
+            sourceLanguage,
+            targetLanguage,
+            upgradeModel,
+            bookName,
+        } = message.data
 
         logger.info("Translating word:", word, "with context")
 
@@ -41,6 +51,7 @@ export async function handleTranslationRequest(
             word,
             leadingText,
             trailingText,
+            originalSentence,
             sourceLanguage,
             targetLanguage,
             upgradeModel,

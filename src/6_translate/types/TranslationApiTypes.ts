@@ -12,6 +12,8 @@ export interface TranslationContext {
     leadingText: string
     /** 句子内部单词后的文本 */
     trailingText: string
+    /** 包含目标单词的完整原句 */
+    originalSentence?: string
     /** 主句子之前的句子数组 (从早到晚排序) */
     previousSentences?: string[]
     /** 主句子之后的句子数组 (从早到晚排序) */

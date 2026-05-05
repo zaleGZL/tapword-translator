@@ -569,11 +569,16 @@ export function removeTranslationResult(translationId: string): void {
     }
 }
 
+export interface RemoveAllTranslationResultsOptions {
+    /** Close the currently open detail modal as part of the cleanup. */
+    closeModal?: boolean
+}
+
 /**
  * Remove every active translation from the page.
  * Also purges any "orphaned" tooltip elements that are no longer tracked in state.
  */
-export function removeAllTranslationResults(): void {
+export function removeAllTranslationResults(options: RemoveAllTranslationResultsOptions = {}): void {
     try {
         for (const id of Array.from(activeTranslations.keys())) {
             cleanupTranslationById(id, "remove")
@@ -581,7 +586,10 @@ export function removeAllTranslationResults(): void {
 
         // No removeUntrackedAnchorElements() — V2 never creates anchor spans.
         removeUntrackedTooltipElements()
-        translationModal.closeTranslationModal()
+
+        if (options.closeModal === true) {
+            translationModal.closeTranslationModal()
+        }
 
         logger.info("All translation results removed")
     } catch (error) {

@@ -93,6 +93,8 @@ export interface TranslationDetailData {
 let activeModalContainer: HTMLElement | null = null
 /** Host element that owns the shadow root for the modal (for outside-click detection and cleanup) */
 let activeModalHost: HTMLElement | null = null
+/** Keeps the modal mounted if the host page removes extension DOM during scroll/layout updates. */
+let activeModalHostObserver: MutationObserver | null = null
 
 /**
  * ID of the anchor that the current modal is displaying
@@ -154,12 +156,14 @@ export async function showTranslationModal(data: TranslationDetailData, anchorSo
         shadowRoot.appendChild(styleEl)
         // Append modal into shadow
         shadowRoot.appendChild(modal)
-        // Add host to document
-        document.body.appendChild(host)
+        // Add host to a stable document root so body re-renders on SPA/virtualized pages
+        // do not remove the modal during scroll-driven layout updates.
+        getModalHostParent().appendChild(host)
 
         // Store references
         activeModalAnchorId = anchorId || null
         activeModalHost = host
+        watchModalHost(host)
 
         // Position the modal relative to the anchor source range
         if (anchorSource) {
@@ -218,6 +222,7 @@ export function closeTranslationModal(): void {
     activeModalContainer = null
     activeModalAnchorId = null
     activeModalHost = null
+    unwatchModalHost()
 
     // Trigger fade-out animation
     if (modalToClose) {
@@ -272,12 +277,14 @@ export async function updateTranslationModal(data: TranslationDetailData): Promi
     }
 
     try {
+        ensureModalHostMounted()
+
         // Fetch version status for update label
         const versionStatusData = await versionStatus.getVersionStatus()
         const showUpdateLabel = versionStatusData?.needsUpdate ?? false
 
-        // Update content with new template
-        activeModalContainer.innerHTML = modalTemplates.renderModalContentTemplate(data, showUpdateLabel)
+        // Update content with component-rendered DOM.
+        activeModalContainer.replaceChildren(modalTemplates.renderModalContent(data, showUpdateLabel))
 
         // Reattach action button listeners after content update
         attachActionButtonListeners(activeModalContainer, data)
@@ -489,8 +496,8 @@ function createModalElement(data: TranslationDetailData, showUpdateLabel: boolea
         modalContainer.classList.add("translation-type--fragment")
     }
 
-    // Render modal HTML from template (includes close button)
-    modalContainer.innerHTML = modalTemplates.renderModalContentTemplate(data, showUpdateLabel)
+    // Render modal DOM from components (includes close button).
+    modalContainer.appendChild(modalTemplates.renderModalContent(data, showUpdateLabel))
 
     // Store content reference for updates (the entire container in this case)
     activeModalContainer = modalContainer
@@ -618,4 +625,44 @@ function createShadowHost(): { host: HTMLElement; shadowRoot: ShadowRoot } {
     host.style.all = "initial"
     const shadowRoot = host.attachShadow({ mode: "open" })
     return { host, shadowRoot }
+}
+
+function getModalHostParent(): HTMLElement {
+    return document.documentElement || document.body
+}
+
+function watchModalHost(host: HTMLElement): void {
+    unwatchModalHost()
+
+    const parent = getModalHostParent()
+    activeModalHostObserver = new MutationObserver(() => {
+        if (activeModalHost !== host || !activeModalContainer) {
+            return
+        }
+
+        ensureModalHostMounted()
+    })
+    activeModalHostObserver.observe(parent, { childList: true })
+}
+
+function unwatchModalHost(): void {
+    if (!activeModalHostObserver) {
+        return
+    }
+
+    activeModalHostObserver.disconnect()
+    activeModalHostObserver = null
+}
+
+function ensureModalHostMounted(): void {
+    if (!activeModalHost || activeModalHost.isConnected) {
+        return
+    }
+
+    try {
+        getModalHostParent().appendChild(activeModalHost)
+        logger.info("Remounted translation modal host after page DOM cleanup")
+    } catch (error) {
+        logger.warn("Failed to remount translation modal host:", error)
+    }
 }

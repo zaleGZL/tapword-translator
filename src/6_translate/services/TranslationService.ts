@@ -118,7 +118,7 @@ async function getLocalExplanationService(config: LLMConfig): Promise<TextExplan
 }
 
 async function translateWordWithLocal(params: TranslateParams, config: LLMConfig): Promise<TranslationResult> {
-    const { word, leadingText, trailingText, sourceLanguage, targetLanguage = "zh", contextInfo } = params
+    const { word, leadingText, trailingText, originalSentence, sourceLanguage, targetLanguage = "zh", contextInfo } = params
 
     logger.info("Using local LLM translation (8_generate)")
 
@@ -127,6 +127,7 @@ async function translateWordWithLocal(params: TranslateParams, config: LLMConfig
         word,
         leadingText,
         trailingText,
+        originalSentence,
         sourceLanguage,
         targetLanguage,
         contextInfo: {
@@ -230,7 +231,7 @@ function handleAPIError(error: APIError): never {
 }
 
 async function translateWordWithCloud(params: TranslateParams): Promise<TranslationResult> {
-    const { word, leadingText, trailingText, sourceLanguage, targetLanguage = "zh", upgradeModel, contextInfo } = params
+    const { word, leadingText, trailingText, originalSentence, sourceLanguage, targetLanguage = "zh", upgradeModel, contextInfo } = params
 
     const request: TranslationApiRequest = {
         text: word,
@@ -240,6 +241,7 @@ async function translateWordWithCloud(params: TranslateParams): Promise<Translat
         context: {
             leadingText,
             trailingText,
+            originalSentence,
             previousSentences: contextInfo?.previousSentences,
             nextSentences: contextInfo?.nextSentences,
             bookName: contextInfo?.bookName,
@@ -307,10 +309,10 @@ export async function translateWord(params: TranslateParams): Promise<Translatio
             }
 
             logger.info("Translating word using MTranServer")
-            const { word, leadingText, trailingText, targetLanguage = "zh" } = params
+            const { word, leadingText, trailingText, originalSentence, targetLanguage = "zh" } = params
 
-            const fullSentence = `${leadingText || ""}${word}${trailingText || ""}`
-            const hasContext = Boolean(leadingText || trailingText)
+            const fullSentence = originalSentence || `${leadingText || ""}${word}${trailingText || ""}`
+            const hasContext = Boolean(originalSentence || leadingText || trailingText)
 
             const [wordTranslation, sentenceTranslation] = await Promise.all([
                 translateWithMTranServer(word, targetLanguage, mtranserverSettings),
@@ -348,10 +350,10 @@ export async function translateWord(params: TranslateParams): Promise<Translatio
         // Bing Translate
         if (provider === "bingTranslate") {
             logger.info("Translating word using Bing Translate")
-            const { word, leadingText, trailingText, targetLanguage = "zh" } = params
+            const { word, leadingText, trailingText, originalSentence, targetLanguage = "zh" } = params
 
-            const fullSentence = `${leadingText || ""}${word}${trailingText || ""}`
-            const hasContext = Boolean(leadingText || trailingText)
+            const fullSentence = originalSentence || `${leadingText || ""}${word}${trailingText || ""}`
+            const hasContext = Boolean(originalSentence || leadingText || trailingText)
 
             const [wordTranslation, sentenceTranslation] = await Promise.all([
                 translateWithBingTranslate(word, targetLanguage, userSettings.bingTranslate),

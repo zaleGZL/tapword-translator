@@ -29,12 +29,12 @@ This module is the core of the extension that runs on web pages. It is responsib
 │       ├── tapWordDetector.ts      # Resolves word range from a pointer coordinate
 │       ├── translationOverlapDetectorV2.ts # Detects overlapping translations (Range-based)
 │       └── wordBoundary.ts         # Word boundary detection utilities
-├── resources/                      # Static resources (HTML templates, CSS)
+├── resources/                      # Static resources (CSS)
 ├── services/
 │   └── translationRequest.ts       # Communicates with the background script
 ├── ui/
 │   ├── iconManager.ts              # Manages the translation icon's lifecycle
-│   ├── modalTemplates.ts           # Loads HTML templates for the modal
+│   ├── modalTemplates.ts           # DOM component builders for the modal
 │   ├── toastNotification.ts        # Displays temporary toast notifications
 │   ├── translationDisplayV2.ts     # Manages translation display via Range-based rendering
 │   ├── translationDisplayV2/       # Sub-components for translation display

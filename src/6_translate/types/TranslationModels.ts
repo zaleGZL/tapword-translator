@@ -14,6 +14,8 @@ export interface TranslateParams {
     leadingText: string
     /** 单词后的文本 (句子内部) */
     trailingText: string
+    /** 包含该单词的完整原句 */
+    originalSentence?: string
     /** 源语言 (可选, 例如 "en") */
     sourceLanguage?: string
     /** 目标语言 (可选, 默认 "zh") */

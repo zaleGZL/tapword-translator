@@ -16,6 +16,10 @@
     --modal-divider-color: #efefefe6;
 }
 
+[data-app-edition="community"] [data-community-hide="speech"] {
+    display: none !important;
+}
+
 /* ============================================================================
    Modal Container
    ============================================================================ */

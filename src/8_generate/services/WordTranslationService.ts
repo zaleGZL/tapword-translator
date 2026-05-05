@@ -37,6 +37,30 @@ function buildOptionalSection(title: string, value: string | undefined): string 
     return ""
 }
 
+function normalizePromptText(text: string | undefined): string {
+    return (text ?? "").replace(/\n/g, " ")
+}
+
+function buildHighlightedSentence(sentence: string, target: string, leadingText: string, trailingText: string): string {
+    const escapedTarget = escapeXmlChars(target)
+
+    if (leadingText || trailingText) {
+        return `<fragment>${escapeXmlChars(leadingText)}<target>${escapedTarget}</target>${escapeXmlChars(trailingText)}</fragment>`
+    }
+
+    const targetIndex = sentence.indexOf(target)
+    if (targetIndex < 0) {
+        return `<fragment>${escapeXmlChars(sentence)}</fragment>`
+    }
+
+    const beforeTarget = sentence.slice(0, targetIndex)
+    const matchedTarget = sentence.slice(targetIndex, targetIndex + target.length)
+    const afterTarget = sentence.slice(targetIndex + target.length)
+    return `<fragment>${escapeXmlChars(beforeTarget)}<target>${escapeXmlChars(matchedTarget)}</target>${escapeXmlChars(
+        afterTarget
+    )}</fragment>`
+}
+
 /**
  * Word Translation Service
  *
@@ -77,34 +101,38 @@ export class WordTranslationService {
             throw new Error("Service not initialized. Call initialize() first.")
         }
 
-        const { word, leadingText, trailingText, sourceLanguage, targetLanguage, contextInfo } = request
+        const { word, leadingText, trailingText, originalSentence, sourceLanguage, targetLanguage, contextInfo } = request
 
         // Get language names
         const { sourceName, targetName } = languageUtilsModule.getLanguageNames(sourceLanguage, targetLanguage)
 
         // Clean input text: replace newlines with spaces and trim
-        const cleanWord = word.replace(/\n/g, " ").trim()
+        const cleanWord = normalizePromptText(word).trim()
 
         let contextText = ""
         let sentenceValue = ""
 
-        if (!leadingText && !trailingText) {
+        if (!leadingText && !trailingText && !originalSentence) {
             // No context provided
             contextText = ""
             sentenceValue = ""
         } else {
             // Context provided: construct sentence and context
-            const cleanLeadingText = (leadingText ?? "").replace(/\n/g, " ")
-            const cleanTrailingText = (trailingText ?? "").replace(/\n/g, " ")
+            const cleanLeadingText = normalizePromptText(leadingText)
+            const cleanTrailingText = normalizePromptText(trailingText)
             const cleanTarget = cleanWord
 
             // Construct full sentence
-            const fullSentence = cleanLeadingText + cleanTarget + cleanTrailingText
+            const fullSentence = normalizePromptText(originalSentence) || cleanLeadingText + cleanTarget + cleanTrailingText
             const cleanSentence = fullSentence.trim()
 
             // Build contextText with <fragment> and <target> tags
-            const escapedTarget = escapeXmlChars(cleanTarget)
-            const highlightedSentenceInContext = `<fragment>${cleanLeadingText}<target>${escapedTarget}</target>${cleanTrailingText}</fragment>`
+            const highlightedSentenceInContext = buildHighlightedSentence(
+                cleanSentence,
+                cleanTarget,
+                cleanLeadingText,
+                cleanTrailingText
+            )
 
             // Include previous and next sentences if available
             const cleanPreviousSentences = (contextInfo?.previousSentences ?? []).map((s) => s.replace(/\n/g, " ").trim())

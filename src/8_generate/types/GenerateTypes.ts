@@ -43,6 +43,8 @@ export interface WordTranslationRequest {
     leadingText?: string
     /** Text after the word in the sentence */
     trailingText?: string
+    /** Complete source sentence containing the word */
+    originalSentence?: string
     /** Source language code (e.g., 'en', 'zh') */
     sourceLanguage?: string
     /** Target language code (e.g., 'zh', 'en', default: 'zh') */
